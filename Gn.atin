@@ -1,0 +1,245 @@
+-- Script Teleport Tanpa Loop untuk Delta Executor Android
+-- Teleport ke koordinat dengan delay tanpa loop - DIPERBAIKI
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+
+-- Variabel kontrol
+local isRunning = false
+
+-- GUI untuk kontrol
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local StartButton = Instance.new("TextButton")
+local StopButton = Instance.new("TextButton")
+local StatusLabel = Instance.new("TextLabel")
+
+-- Setup GUI
+ScreenGui.Name = "TeleportControl"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+Frame.Size = UDim2.new(0, 200, 0, 120)
+Frame.Position = UDim2.new(0, 10, 0, 10)
+Frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Frame.BorderSizePixel = 2
+Frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+Frame.Parent = ScreenGui
+
+StartButton.Size = UDim2.new(0, 90, 0, 30)
+StartButton.Position = UDim2.new(0, 5, 0, 5)
+StartButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+StartButton.Text = "START"
+StartButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+StartButton.TextScaled = true
+StartButton.Font = Enum.Font.SourceSansBold
+StartButton.Parent = Frame
+
+StopButton.Size = UDim2.new(0, 90, 0, 30)
+StopButton.Position = UDim2.new(0, 105, 0, 5)
+StopButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+StopButton.Text = "STOP"
+StopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+StopButton.TextScaled = true
+StopButton.Font = Enum.Font.SourceSansBold
+StopButton.Parent = Frame
+
+StatusLabel.Size = UDim2.new(0, 190, 0, 75)
+StatusLabel.Position = UDim2.new(0, 5, 0, 40)
+StatusLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+StatusLabel.Text = "Status: Ready\nKlik START untuk teleport"
+StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatusLabel.TextScaled = true
+StatusLabel.Font = Enum.Font.SourceSans
+StatusLabel.TextWrapped = true
+StatusLabel.Parent = Frame
+
+-- Fungsi delay yang aman
+local function safeWait(duration)
+    local endTime = tick() + duration
+    while tick() < endTime do
+        if not isRunning then return false end
+        wait(0.1)
+    end
+    return true
+end
+
+-- Fungsi teleport yang lebih aman
+local function teleportToPosition(x, y, z)
+    local character = LocalPlayer.Character
+    if not character then
+        warn("Character tidak ditemukan!")
+        return false
+    end
+    
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then
+        warn("HumanoidRootPart tidak ditemukan!")
+        return false
+    end
+    
+    -- Teleport dengan error handling
+    local success = pcall(function()
+        humanoidRootPart.CFrame = CFrame.new(x, y, z)
+    end)
+    
+    if success then
+        print(string.format("Teleport berhasil ke: %.0f, %.0f, %.0f", x, y, z))
+        return true
+    else
+        warn("Gagal melakukan teleport!")
+        return false
+    end
+end
+
+-- Fungsi untuk berjalan ke koordinat tertentu
+local function walkToPosition(targetX, targetY, targetZ)
+    if not isRunning then return false end
+
+    local character = LocalPlayer.Character
+    if not character then
+        warn("Character tidak ditemukan!")
+        return false
+    end
+    
+    local humanoid = character:FindFirstChild("Humanoid")
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    
+    if not humanoid or not humanoidRootPart then
+        warn("Character atau Humanoid tidak ditemukan!")
+        return false
+    end
+
+    local targetPosition = Vector3.new(targetX, targetY, targetZ)
+    humanoid:MoveTo(targetPosition)
+
+    local startTime = tick()
+    local timeout = 15 -- Timeout diperpanjang
+
+    repeat
+        wait(0.1)
+        if not isRunning then return false end
+        if not character.Parent then return false end -- Check jika character masih ada
+    until (humanoidRootPart.Position - targetPosition).Magnitude < 5 or (tick() - startTime) > timeout
+
+    return true
+end
+
+-- Koordinat teleport - DITAMBAHKAN KOORDINAT BARU
+local coordinates = {
+    start = {x = -424, y = 1741, z = 2798},
+    second = {x = 625, y = 1799, z = 3431}, -- KOORDINAT BARU DITAMBAHKAN
+    middle = {x = 823, y = 2145, z = 3906},
+    final = {x = 718, y = 2196, z = 3985}
+}
+
+-- Fungsi utama teleport (tanpa loop) - DIPERBAIKI
+local function teleportSequence()
+    print("=== Memulai Teleport Sequence ===")
+    
+    -- STEP 1: Teleport ke koordinat pertama
+    StatusLabel.Text = "Status: Running\nTeleport ke titik 1..."
+    if not teleportToPosition(coordinates.start.x, coordinates.start.y, coordinates.start.z) then
+        StatusLabel.Text = "Status: Error\nGagal teleport ke titik 1"
+        isRunning = false
+        return
+    end
+
+    -- Delay 2 detik
+    if not safeWait(2) then return end
+
+    -- STEP 2: Teleport ke koordinat kedua (BARU)
+    StatusLabel.Text = "Status: Running\nTeleport ke titik 2..."
+    if not teleportToPosition(coordinates.second.x, coordinates.second.y, coordinates.second.z) then
+        StatusLabel.Text = "Status: Error\nGagal teleport ke titik 2"
+        isRunning = false
+        return
+    end
+
+    -- Delay 2 detik
+    if not safeWait(2) then return end
+
+    -- STEP 3: Teleport ke koordinat ketiga (middle)
+    StatusLabel.Text = "Status: Running\nTeleport ke titik 3..."
+    if not teleportToPosition(coordinates.middle.x, coordinates.middle.y, coordinates.middle.z) then
+        StatusLabel.Text = "Status: Error\nGagal teleport ke titik 3"
+        isRunning = false
+        return
+    end
+
+    -- Delay 1 detik
+    if not safeWait(1) then return end
+
+    -- STEP 4: Berjalan ke koordinat akhir
+    StatusLabel.Text = "Status: Running\nBerjalan ke titik akhir..."
+    if not walkToPosition(coordinates.final.x, coordinates.final.y, coordinates.final.z) then
+        StatusLabel.Text = "Status: Error\nGagal berjalan ke titik akhir"
+        isRunning = false
+        return
+    end
+
+    -- Selesai
+    StatusLabel.Text = "Status: Complete\nTeleport selesai!"
+    isRunning = false
+    StartButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    StopButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+    print("=== Teleport Sequence Selesai ===")
+end
+
+-- Event handler untuk tombol Start
+StartButton.MouseButton1Click:Connect(function()
+    if not isRunning then
+        -- Check apakah character ada sebelum memulai
+        if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            StatusLabel.Text = "Status: Error\nCharacter tidak ditemukan!"
+            return
+        end
+        
+        isRunning = true
+        StartButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        StopButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        print("=== Script Teleport Dimulai ===")
+
+        -- Jalankan teleport sequence dalam thread terpisah
+        spawn(teleportSequence)
+    end
+end)
+
+-- Event handler untuk tombol Stop
+StopButton.MouseButton1Click:Connect(function()
+    if isRunning then
+        isRunning = false
+        StartButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        StopButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+        StatusLabel.Text = "Status: Stopped\nKlik START untuk teleport"
+        print("=== Script Teleport Dihentikan ===")
+    end
+end)
+
+-- Keyboard shortcuts (opsional) - DIPERBAIKI
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+
+    if input.KeyCode == Enum.KeyCode.P then -- P untuk Start
+        if not isRunning then
+            StartButton.MouseButton1Click:Fire()
+        end
+    elseif input.KeyCode == Enum.KeyCode.S then -- S untuk Stop
+        if isRunning then
+            StopButton.MouseButton1Click:Fire()
+        end
+    end
+end)
+
+-- Cleanup ketika player meninggalkan game
+Players.PlayerRemoving:Connect(function(player)
+    if player == LocalPlayer then
+        isRunning = false
+    end
+end)
+
+print("=== Delta Executor Teleport Script Loaded (Enhanced) ===")
+print("Kontrol GUI telah dibuat di pojok kiri atas")
+print("Shortcuts: P = Start, S = Stop")
+print("Koordinat sequence: Start -> Second -> Middle -> Final (Walk)")
+print("Koordinat yang ditambahkan: X=625, Y=1799, Z=3431")
